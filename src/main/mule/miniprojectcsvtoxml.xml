@@ -25,7 +25,7 @@ output application/java
 payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-			<set-variable value="#[payload.patientno[0] as Number]" doc:name="PatientNo" doc:id="be3439de-d58f-4fe7-a012-e35a32d372e8" variableName="PatientNo_var"/>
+			<set-variable value="#[payload.patientno[0]]" doc:name="PatientNo" doc:id="be3439de-d58f-4fe7-a012-e35a32d372e8" variableName="PatientNo_var"/>
 			<set-variable value="#[payload.pfirstname[0] ++ ' ' ++ payload.plastname[0]]" doc:name="Concatenate First and Last name" doc:id="aacac46c-a28c-48a6-9092-70af5f6f8d3b" variableName="fullname_var"/>
 			<set-variable value="#[payload.mainsymptom[0]]" doc:name="symptom" doc:id="3468c288-ef08-4a9f-930e-018a9fee9ee9" variableName="symptom_var" />
 			<db:select doc:name="Fetch drname and disease name from diseasemaster table" doc:id="4b70979b-f5ca-44d7-a45b-9b450bbec49b" config-ref="Database_Config">
