@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="e10d1210-6ed3-4047-9072-c9a1cb9d7553" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="admin" database="mule" />
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a05bfe95-8afc-424a-9f0f-8a4a2e8f5451" >
+		<http:listener-connection host="localhost" port="9001" />
+	</http:listener-config>
+	<flow name="miniprojectcsvtoxmlFlow" doc:id="78375f63-ed05-42cd-8aa9-e2c7ee3958d0" >
+		<http:listener doc:name="Accept CSV data from postman" doc:id="e669f16c-bb1a-4c84-9555-953f5174dfb9" config-ref="HTTP_Listener_config" path="/diagnosis"/>
+		<logger level="INFO" doc:name="Display CSV data" doc:id="22e71397-b810-4c5b-b972-8ad99efee0a9" message="#[payload]"/>
+		<foreach doc:name="For Each" doc:id="dce3e8b1-1804-45d1-b741-0aed34700b79" collection="#[payload]">
+			<ee:transform doc:name="Transform Message" doc:id="7d328c8c-bdb5-4591-aa28-c4bbdfafa804">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			<set-variable value="#[payload.patientno[0]]" doc:name="PatientNo" doc:id="be3439de-d58f-4fe7-a012-e35a32d372e8" variableName="PatientNo_var"/>
+			<set-variable value="#[payload.pfirstname[0] ++ ' ' ++ payload.plastname[0]]" doc:name="Concatenate First and Last name" doc:id="aacac46c-a28c-48a6-9092-70af5f6f8d3b" variableName="fullname_var"/>
+			<set-variable value="#[payload.mainsymptom[0]]" doc:name="symptom" doc:id="3468c288-ef08-4a9f-930e-018a9fee9ee9" variableName="symptom_var" />
+			<db:select doc:name="Fetch drname and disease name from diseasemaster table" doc:id="4b70979b-f5ca-44d7-a45b-9b450bbec49b" config-ref="Database_Config">
+				<db:sql >SELECT *FROM diseasemaster
+WHERE symptom = :sym</db:sql>
+				<db:input-parameters ><![CDATA[#[{
+	"sym" : vars.symptom_var
+}]]]></db:input-parameters>
+			</db:select>
+			<set-variable value="#[payload.drname[0]]" doc:name="drname" doc:id="8c053ff7-342c-48a2-a8fc-44346dbcd049" variableName="drname"/>
+			<set-variable value="#[payload.diseasename[0]]" doc:name="diseasename" doc:id="27a696c1-4d33-407f-adb4-1bae1e41521b" variableName="diseasename_var"/>
+			<db:insert doc:name="Insert into treatment database" doc:id="650e0f79-5115-481d-afd1-0eb70c77bd5a" config-ref="Database_Config">
+				<db:sql >INSERT INTO treatment
+VALUES(:tid,:pid,:dis,:dr,:name)</db:sql>
+				<db:input-parameters ><![CDATA[#[{
+	"tid" : vars.PatientNo_var,
+	"pid" : vars.PatientNo_var,
+	"dis" : vars.diseasename_var,
+	"name": vars.fullname_var,
+	"dr" : vars.drname
+}]]]></db:input-parameters>
+			</db:insert>
+		</foreach>
+		<db:select doc:name="Fetch treatment table" doc:id="5b5d0970-d525-432f-9ef5-6d5013ed11ba" config-ref="Database_Config">
+				<db:sql>SELECT *FROM treatment</db:sql>
+			</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="33d9123c-4831-4fad-9181-3de85c83e21f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+{
+	"discharge-summary": {
+		(payload map ( payload01 , indexOfPayload01 ) -> {
+			patient: {
+				patientid: payload01.patientid,
+				patientname: payload01.fullname,
+				diagnosis: payload01.disease,
+				drname: payload01.drname
+			}
+		})
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write every patient xml record" doc:id="fba41884-530c-4231-8330-650c1a1b76aa" path="C:\data\patients\patient.xml" />
+		<set-variable value="#[payload]" doc:name="patientRecord" doc:id="511bb06c-e174-4bbd-825a-e0c0d828e922" variableName="patientRecord_var"/>
+		<db:delete doc:name="Delete records from treatment table" doc:id="fa1c4103-97c2-4c40-9d4c-e548836814be" config-ref="Database_Config">
+				<db:sql>DELETE FROM treatment</db:sql>
+			</db:delete>
+		<set-payload value="#[vars.patientRecord_var]" doc:name="Set Payload" doc:id="4affafd3-b56a-4756-8d7c-d90066de4752" />
+	</flow>
+</mule>

@@ -1,0 +1,8 @@
+<discharge-summary>
+	<patient>
+		<patientid>100</patientid>
+		<patientname>faruq</patientname>
+		<diagnosis>flu</diagnosis>
+		<drname>robert kiyosaki</drname>
+	</patient>
+</discharge-summary>
