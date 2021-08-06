@@ -1,0 +1,14 @@
+<discharge-summary>
+	<patient>
+		<patientid>100</patientid>
+		<patientname>faruq</patientname>
+		<diagnosis>flu</diagnosis>
+		<drname>robert kiyosaki</drname>
+	</patient>	
+	<patient>
+		<patientid>200</patientid>
+		<patientname>kent</patientname>
+		<diagnosis>viral</diagnosis>
+		<drname>donald duck</drname>
+	</patient>		
+</discharge-summary>
